@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
+
+# PyInstaller
+#  Usually these are temporary, but sometimes we want to keep spec files.
+#  We WILL keep .spec files, but ignore build/ and dist/
+build/
+dist/
+*.manifest
+
+# Application Specific
+outputs/
+uploads/
+*.user
+
+# System
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/

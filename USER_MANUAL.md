@@ -52,7 +52,7 @@ Choose the output video codec:
 -   **ProRes**: Industry standard for editing and high quality.
 -   **MJPEG**: Good balance of performance and quality.
 
-#### Quality (New!)
+#### Quality
 Control output file size and visual fidelity. The slider adapts based on your selected Format:
 -   **MP4**: Controls **CRF** (Constant Rate Factor). Range: 18 (Best) to 35 (Low).
 -   **MJPEG**: Controls **Q** (Quantization). Range: 2 (Best) to 31 (Low).
@@ -60,23 +60,30 @@ Control output file size and visual fidelity. The slider adapts based on your se
 -   **HAP**: Selects Format: **Hap** or **Hap Q** (Higher Quality).
 > **Visual Rule**: Moving the slider to the **Right** always improves quality (and likely increases file size).
 
-#### Crossfade
--   **Enable/Disable**: Toggle the checkbox to turn crossfading on or off.
--   **Duration**: Use the slider to set the blend time (0.1s to 10.0s).
--   *Tip*: A 1.0s crossfade is usually sufficient for smooth loops.
-
 #### Set Start (Trimming Input)
 Ignore the beginning of a video clip (e.g., to skip an intro or unstable camera move).
--   **How**: Check "Set Start" and adjust the slider.
--   **Effect**: The processed video will effectively "start" from this timestamp.
+-   **Enable**: Check "Set Start".
+-   **Adjust**: Use the slider (0-60s) to seek into the video.
+-   **Precise Input**: Click the number label (e.g., "0.0s") to type an exact value.
+
+#### Crossfade
+-   **Enable/Disable**: Toggle the checkbox to turn crossfading on or off.
+-   **Duration**: Set blend time (0.1s to 59.5s).
+-   **Precise Input**: Click the label to type exact seconds.
+-   *Tip*: A 1.0s crossfade is usually sufficient for smooth loops.
 
 #### Set Length (Trimming Output)
 Define the exact duration of your final loop.
--   **How**: Check "Set Length" and adjust the slider.
--   **Precision**:
-    -   **0-10s**: Fine adjustments (0.1s steps).
-    -   **10s+**: Coarse adjustments (1.0s steps).
--   **Smart Constraints**: The app ensures length >= crossfade duration + 0.5s.
+-   **Enable**: Check "Set Length".
+-   **Adjust**: Use the slider (0.0s to 60.0s).
+-   **Precise Input**: Click the label to type an exact value.
+-   **Smart Constraints**: The app ensures length is at least `Crossfade + 0.5s`.
+
+#### Scale (Resolution)
+Resize your output video.
+-   **Enable**: Check "Scale".
+-   **Presets**: Click **4K** (3840x2160), **1080** (1920x1080), or **720** (1280x720).
+-   **Custom**: Manually type width and height into the text boxes.
 
 #### Filename
 Customize the output file naming convention.
@@ -113,7 +120,7 @@ Processed files are saved based on your **Output Directory** setting:
 A: Oopl enforces a minimum size (500x600) to ensure all controls remain visible and usable.
 
 **Q: Can I run it on Mac?**
-A: This version (`.exe`) is for Windows only. (Mac executable pending build).
+A: Yes! A Mac version is available. If you have the source code, check `MIGRATION_GUIDE_MAC.md` for build instructions.
 
 **Q: My video is shorter than the requested length?**
 A: The application will attempt to use the maximum available duration. If the video is too short for the requested crossfade, it may fail or produce a shorter loop.

@@ -78,11 +78,17 @@ Define the exact duration of your final loop.
     -   **10s+**: Coarse adjustments (1.0s steps).
 -   **Smart Constraints**: The app ensures length >= crossfade duration + 0.5s.
 
-#### Filename (New!)
+#### Filename
 Customize the output file naming convention.
--   **Append** (Default): Adds text to the end. `video.mp4` -> `video loop.mp4`
--   **Prepend**: Adds text to the beginning. `video.mp4` -> `loop video.mp4`
--   **Custom Text**: Edit the text field to change the tag (default `" loop"`).
+-   **Append** (Default): Adds text to the end. `video.mp4` -> `video_oopl.mp4`
+-   **Prepend**: Adds text to the beginning. `video.mp4` -> `_oopl video.mp4`
+-   **Custom Text**: Edit the text field to change the tag (default `"_oopl"`).
+
+#### Output Directory
+Choose where processed files are saved.
+-   **Output To...**: Click to choose a specific folder for all output files.
+-   **Default**: If no folder is selected (displays "Same as Input"), output files are saved in the same folder as their corresponding input files.
+-   **Reset**: Click the Reset button to revert to the default behavior.
 
 > **💡 Pro Tip (Keyboard Control)**: Click on any slider to focus it, then use your **Left/Right Arrow Keys** for precise adjustments.
 
@@ -94,9 +100,10 @@ Customize the output file naming convention.
 ---
 
 ## 📂 Output
-Processed files are saved in an `outputs` folder created automatically in the same directory as the executable.
--   **Naming**: `OriginalName loop.{ext}`
--   Example: `waterfall.mov` -> `outputs/waterfall loop.mov`
+Processed files are saved based on your **Output Directory** setting:
+-   **Same as Input (Default)**: Next to the original file.
+-   **Custom Directory**: In the specific folder you chose.
+-   **Naming**: `OriginalName{Suffix}.{ext}` (e.g., `waterfall loop.mov`).
 
 ---
 

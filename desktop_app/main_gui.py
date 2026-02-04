@@ -5,6 +5,7 @@ import threading
 import sys
 import webbrowser
 import glob
+from PIL import Image, ImageTk
 from processor import process_video_crossfade
 
 # Configuration
@@ -18,7 +19,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
 
         self.title("Oopl - VJ Loop Crossfader")
         self.title("Oopl - VJ Loop Crossfader")
-        self.geometry("550x680")
+        self.geometry("550x720")
         self.minsize(500, 550)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(4, weight=1) # Log area expands
@@ -31,9 +32,54 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.bind("<Left>", lambda e: self.on_global_arrow_key(-1))
         self.bind("<Right>", lambda e: self.on_global_arrow_key(1))
 
-        # Title
-        self.label_title = ctk.CTkLabel(self, text="Oopl", font=("Arial", 18, "bold"))
-        self.label_title.grid(row=0, column=0, padx=20, pady=(10, 5), sticky="w")
+        # --- Icon & Branding ---
+        # Determine path to assets
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+            asset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets")
+            # Fallback if mapped differently
+            if not os.path.exists(asset_dir):
+                 asset_dir = os.path.join(sys._MEIPASS, "assets")
+        else:
+            asset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets")
+
+        self.logo_img = None
+        
+        # 1. Set Window Icon (Titlebar & Taskbar) - Prefer .ico on Windows
+        ico_path = os.path.join(asset_dir, "icon.ico")
+        png_path = os.path.join(asset_dir, "icon.png")
+        
+        if os.path.exists(ico_path):
+            try:
+                self.iconbitmap(ico_path)
+            except Exception as e:
+                print(f"Failed to set iconbitmap: {e}")
+        elif os.path.exists(png_path):
+            try:
+                # Fallback for non-Windows or if ico missing
+                icon_img = ImageTk.PhotoImage(Image.open(png_path))
+                self.wm_iconphoto(True, icon_img)
+            except Exception as e:
+                print(f"Failed to set iconphoto: {e}")
+
+        # 2. Load UI Logo (Toolbar)
+        if os.path.exists(png_path):
+            try:
+                pil_img = Image.open(png_path)
+                self.logo_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(32, 32))
+            except Exception as e:
+                print(f"Failed to load logo image: {e}")
+
+        # Title Row
+        self.frame_title = ctk.CTkFrame(self, fg_color="transparent")
+        self.frame_title.grid(row=0, column=0, padx=20, pady=(10, 5), sticky="w")
+        
+        if self.logo_img:
+            self.lbl_logo = ctk.CTkLabel(self.frame_title, text="", image=self.logo_img)
+            self.lbl_logo.pack(side="left", padx=(0, 10))
+            
+        self.label_title = ctk.CTkLabel(self.frame_title, text="Oopl", font=("Arial", 18, "bold"))
+        self.label_title.pack(side="left")
 
         # Attribution (Top Right)
         self.frame_attribution = ctk.CTkFrame(self, fg_color="transparent")
@@ -53,67 +99,122 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
 
         # Row 0: Format Selection
         self.label_format = ctk.CTkLabel(self.frame_settings, text="Format:")
-        self.label_format.grid(row=0, column=0, padx=10, pady=10)
+        self.label_format.grid(row=0, column=0, padx=10, pady=4)
 
         self.seg_format = ctk.CTkSegmentedButton(self.frame_settings, values=["MP4", "HAP", "ProRes", "MJPEG"], command=self.update_quality_config)
         self.seg_format.set("MP4")
-        self.seg_format.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        self.seg_format.grid(row=0, column=1, padx=10, pady=4, sticky="ew")
 
         # Row 1: Quality Slider
         self.label_quality = ctk.CTkLabel(self.frame_settings, text="Quality:")
-        self.label_quality.grid(row=1, column=0, padx=10, pady=10)
+        self.label_quality.grid(row=1, column=0, padx=10, pady=4)
         
         # Initial config for MP4 (0-17 mapping to CRF 35-18)
         self.slider_quality = ctk.CTkSlider(self.frame_settings, from_=0, to=17, number_of_steps=17, command=self.update_quality_label)
         self.slider_quality.set(12) # Default around CRF 23 (35 - 12 = 23)
-        self.slider_quality.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
+        self.slider_quality.grid(row=1, column=1, padx=10, pady=4, sticky="ew")
         
         self.label_quality_val = ctk.CTkLabel(self.frame_settings, text="CRF 23", width=80)
-        self.label_quality_val.grid(row=1, column=2, padx=5, pady=10)
+        self.label_quality_val.grid(row=1, column=2, padx=5, pady=4)
 
-        # Row 2: Crossfade Control
+        # Row 3: Crossfade Control (Moved down)
         self.check_crossfade = ctk.CTkCheckBox(self.frame_settings, text="Crossfade", command=self.toggle_crossfade)
         self.check_crossfade.select() # Default ON
-        self.check_crossfade.grid(row=2, column=0, padx=10, pady=10, sticky="w")
+        self.check_crossfade.grid(row=3, column=0, padx=10, pady=4, sticky="w")
         
-        self.slider_duration = ctk.CTkSlider(self.frame_settings, from_=0.1, to=10.0, number_of_steps=99, command=self.update_duration_label)
+        self.slider_duration = ctk.CTkSlider(self.frame_settings, from_=0, to=59.5, number_of_steps=595, command=self.update_duration_label)
         self.slider_duration.set(1.0)
-        self.slider_duration.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
+        self.slider_duration.grid(row=3, column=1, padx=10, pady=4, sticky="ew")
         
         self.label_crossfade_val = ctk.CTkLabel(self.frame_settings, text="1.0s", width=60)
-        self.label_crossfade_val.grid(row=2, column=2, padx=5, pady=10)
-
-        # Row 3: Set Start
-        self.check_start = ctk.CTkCheckBox(self.frame_settings, text="Set Start", command=self.toggle_start)
-        self.check_start.grid(row=3, column=0, padx=10, pady=10, sticky="w")
+        self.label_crossfade_val.grid(row=3, column=2, padx=5, pady=4)
+        # Editable Crossfade Logic
+        self.custom_crossfade_val = None
+        self.label_crossfade_val.bind("<Button-1>", self.edit_crossfade_value)
         
-        self.slider_start = ctk.CTkSlider(self.frame_settings, from_=0, to=10.0, number_of_steps=100, command=self.update_start_label, state="disabled")
+        self.entry_crossfade_val = ctk.CTkEntry(self.frame_settings, width=60)
+        self.entry_crossfade_val.bind("<Return>", self.submit_crossfade_value)
+        self.entry_crossfade_val.bind("<FocusOut>", self.submit_crossfade_value)
+
+        # Row 2: Set Start (Moved up)
+        self.check_start = ctk.CTkCheckBox(self.frame_settings, text="Set Start", command=self.toggle_start)
+        self.check_start.grid(row=2, column=0, padx=10, pady=4, sticky="w")
+        
+        self.slider_start = ctk.CTkSlider(self.frame_settings, from_=0, to=60.0, number_of_steps=600, command=self.update_start_label, state="disabled")
         self.slider_start.set(0.0)
-        self.slider_start.grid(row=3, column=1, padx=10, pady=10, sticky="ew")
+        self.slider_start.grid(row=2, column=1, padx=10, pady=4, sticky="ew")
         
         self.label_start_val = ctk.CTkLabel(self.frame_settings, text="0.0s", width=60)
-        self.label_start_val.grid(row=3, column=2, padx=5, pady=10)
+        self.label_start_val.grid(row=2, column=2, padx=5, pady=4)
         self.label_start_val.configure(text_color="gray")
+        # Editable Start Value Logic
+        self.custom_start_val = None
+        self.label_start_val.bind("<Button-1>", self.edit_start_value)
+        
+        self.entry_start_val = ctk.CTkEntry(self.frame_settings, width=60)
+        self.entry_start_val.bind("<Return>", self.submit_start_value)
+        self.entry_start_val.bind("<FocusOut>", self.submit_start_value)
 
         # Row 4: Set Length
         self.check_length = ctk.CTkCheckBox(self.frame_settings, text="Set Length", command=self.toggle_length)
-        self.check_length.grid(row=4, column=0, padx=10, pady=10, sticky="w")
+        self.check_length.grid(row=4, column=0, padx=10, pady=4, sticky="w")
         
-        self.slider_length = ctk.CTkSlider(self.frame_settings, from_=0, to=140, number_of_steps=140, command=self.update_length_label, state="disabled")
-        self.slider_length.set(self.time_to_slider(10.0))
-        self.slider_length.grid(row=4, column=1, padx=10, pady=10, sticky="ew")
+        self.slider_length = ctk.CTkSlider(self.frame_settings, from_=0, to=60.0, number_of_steps=600, command=self.update_length_label, state="disabled")
+        self.slider_length.set(10.0)
+        self.slider_length.grid(row=4, column=1, padx=10, pady=4, sticky="ew")
         
         self.label_length_val = ctk.CTkLabel(self.frame_settings, text="10.0s", width=60)
-        self.label_length_val.grid(row=4, column=2, padx=5, pady=10)
+        self.label_length_val.grid(row=4, column=2, padx=5, pady=4)
         self.label_length_val.configure(text_color="gray")
+        # Editable Length Value Logic
+        self.custom_length_val = None
+        self.label_length_val.bind("<Button-1>", self.edit_length_value)
+        
+        self.entry_length_val = ctk.CTkEntry(self.frame_settings, width=60)
+        self.entry_length_val.bind("<Return>", self.submit_length_value)
+        self.entry_length_val.bind("<FocusOut>", self.submit_length_value)
 
-        # Row 5: Filename configuration
+        # Row 5: Scale Control
+        self.check_scale = ctk.CTkCheckBox(self.frame_settings, text="Scale", command=self.toggle_scale)
+        self.check_scale.grid(row=5, column=0, padx=10, pady=4, sticky="w")
+        
+        self.frame_scale = ctk.CTkFrame(self.frame_settings, fg_color="transparent")
+        self.frame_scale.grid(row=5, column=1, columnspan=2, padx=10, pady=4, sticky="w")
+        
+        self.btn_4k = ctk.CTkButton(self.frame_scale, text="4K", width=40, command=lambda: self.set_scale(3840, 2160))
+        self.btn_4k.pack(side="left", padx=(0, 5))
+        
+        self.btn_1080 = ctk.CTkButton(self.frame_scale, text="1080", width=40, command=lambda: self.set_scale(1920, 1080))
+        self.btn_1080.pack(side="left", padx=(0, 5))
+        
+        self.btn_720 = ctk.CTkButton(self.frame_scale, text="720", width=40, command=lambda: self.set_scale(1280, 720))
+        self.btn_720.pack(side="left", padx=(0, 5))
+        
+        # Spacer for key alignment
+        self.label_spacer_scale = ctk.CTkLabel(self.frame_scale, text="", width=40)
+        self.label_spacer_scale.pack(side="left")
+        
+        self.entry_width = ctk.CTkEntry(self.frame_scale, width=50)
+        self.entry_width.pack(side="left", padx=(5, 0))
+        self.entry_width.bind("<FocusIn>", lambda e: self.entry_width.select_range(0, "end"))
+        
+        self.label_x = ctk.CTkLabel(self.frame_scale, text="x", width=10)
+        self.label_x.pack(side="left")
+        
+        self.entry_height = ctk.CTkEntry(self.frame_scale, width=50)
+        self.entry_height.pack(side="left")
+        self.entry_height.bind("<FocusIn>", lambda e: self.entry_height.select_range(0, "end"))
+        
+        # Initialize disabled
+        self.toggle_scale()
+
+        # Row 6: Filename configuration
         self.label_filename = ctk.CTkLabel(self.frame_settings, text="Filename:")
-        self.label_filename.grid(row=5, column=0, padx=10, pady=10)
+        self.label_filename.grid(row=6, column=0, padx=10, pady=4)
         
         # Frame for controls
         self.frame_filename = ctk.CTkFrame(self.frame_settings, fg_color="transparent")
-        self.frame_filename.grid(row=5, column=1, columnspan=2, padx=10, pady=10, sticky="w")
+        self.frame_filename.grid(row=6, column=1, columnspan=2, padx=10, pady=4, sticky="w")
         
         self.var_name_mode = ctk.StringVar(value="Append")
         self.radio_prepend = ctk.CTkRadioButton(self.frame_filename, text="Prepend", variable=self.var_name_mode, value="Prepend")
@@ -124,14 +225,33 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         
         self.entry_name_text = ctk.CTkEntry(self.frame_filename, width=100)
         self.entry_name_text.pack(side="left")
-        self.entry_name_text.insert(0, " loop")
+        self.entry_name_text.bind("<FocusIn>", lambda e: self.entry_name_text.select_range(0, "end"))
+        self.entry_name_text.insert(0, "_oopl")
 
-        # Keyboard bindings
+        # Row 7: Output Directory
+        self.label_output = ctk.CTkLabel(self.frame_settings, text="Output To:")
+        self.label_output.grid(row=7, column=0, padx=10, pady=4)
+        
+        self.frame_output = ctk.CTkFrame(self.frame_settings, fg_color="transparent")
+        self.frame_output.grid(row=7, column=1, columnspan=2, padx=10, pady=4, sticky="ew")
+        
+        self.custom_output_dir = None # Default: None (Same as Input)
+        
+        self.btn_output_dir = ctk.CTkButton(self.frame_output, text="Choose...", width=80, command=self.select_output_dir)
+        self.btn_output_dir.pack(side="left", padx=(0, 5))
+        
+        self.btn_reset_output = ctk.CTkButton(self.frame_output, text="Reset", width=60, fg_color="gray", command=self.reset_output_dir)
+        self.btn_reset_output.pack(side="left", padx=(0, 5))
+        
+        self.label_output_path = ctk.CTkLabel(self.frame_output, text="Same as Input", text_color="gray", anchor="w")
+        self.label_output_path.pack(side="left", fill="x", expand=True)
+
         # Keyboard bindings
         self.slider_quality.bind("<Button-1>", lambda e: self.set_focused_slider(self.slider_quality))
         self.slider_duration.bind("<Button-1>", lambda e: self.set_focused_slider(self.slider_duration))
         self.slider_start.bind("<Button-1>", lambda e: self.set_focused_slider(self.slider_start))
         self.slider_length.bind("<Button-1>", lambda e: self.set_focused_slider(self.slider_length))
+        self.slider_length.bind("<ButtonRelease-1>", self.on_length_release)
 
         # Queue Management Frame (Row 2)
         self.frame_queue = ctk.CTkFrame(self)
@@ -149,20 +269,19 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.btn_folder = ctk.CTkButton(self.frame_queue, text="+ Folder", command=self.select_folder, width=80)
         self.btn_folder.grid(row=0, column=2, padx=5, pady=5)
         
-        self.btn_clear = ctk.CTkButton(self.frame_queue, text="Clear", command=self.clear_queue, width=60, fg_color="firebrick")
-        self.btn_clear.grid(row=0, column=3, padx=10, pady=5, sticky="e")
-        self.frame_queue.grid_columnconfigure(3, weight=1) # Clear button pushes right? No, weight keeps it flexible. 
-        # Actually to push Clear right, we can put a spacer or use weight on an empty column.
-        # Let's just grid them tightly left-to-right for now, it's compact.
-        
-        # Row 1: Status Label (Integrated)
+        # Row 0: Status Label (Integrated) - Moves to Column 3, expands
         self.label_status = ctk.CTkLabel(self.frame_queue, text="No files selected", text_color="gray", font=("Arial", 12))
-        self.label_status.grid(row=1, column=0, columnspan=4, padx=10, pady=(0, 5), sticky="w")
+        self.label_status.grid(row=0, column=3, padx=10, pady=5, sticky="ew")
         
-        # Row 2: Queue List (Scrollable)
+        self.btn_clear = ctk.CTkButton(self.frame_queue, text="Clear", command=self.clear_queue, width=60, fg_color="firebrick")
+        self.btn_clear.grid(row=0, column=4, padx=10, pady=5, sticky="e")
+        
+        self.frame_queue.grid_columnconfigure(3, weight=1) # Status label expands
+        
+        # Row 1: Queue List (Scrollable)
         # Using a wrapper frame to enforce height limit
         self.frame_queue_container = ctk.CTkFrame(self.frame_queue, height=160, fg_color="transparent")
-        self.frame_queue_container.grid(row=2, column=0, columnspan=4, padx=10, pady=5, sticky="ew")
+        self.frame_queue_container.grid(row=1, column=0, columnspan=5, padx=10, pady=5, sticky="ew")
         self.frame_queue_container.grid_propagate(False) # FORCE height
         self.frame_queue_container.grid_columnconfigure(0, weight=1)
         self.frame_queue_container.grid_rowconfigure(0, weight=1)
@@ -183,6 +302,21 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         # Configure Drop Target
         self.drop_target_register(DND_FILES)
         self.dnd_bind('<<Drop>>', self.drop_files)
+        
+        # Click-away handling (Clear focus on background click)
+        self.bind("<Button-1>", self.on_click_background)
+        self.frame_settings.bind("<Button-1>", self.on_click_background)
+        self.frame_queue.bind("<Button-1>", self.on_click_background)
+
+    def on_click_background(self, event):
+        # Only clear focus if we didn't click on an input widget
+        try:
+            widget_class = event.widget.winfo_class()
+            if widget_class in ["Entry", "Text", "TEntry"]:
+                return
+        except:
+            pass
+        self.focus()
 
     def select_files(self):
         file_paths = ctk.filedialog.askopenfilenames(filetypes=[("Video Files", "*.mov *.mp4 *.avi *.mkv")])
@@ -200,6 +334,21 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                     if any(file.lower().endswith(ext.replace('*', '')) for ext in extensions):
                         new_files.append(os.path.join(root, file))
             self.add_files_to_queue(new_files)
+
+    def select_output_dir(self):
+        dir_path = ctk.filedialog.askdirectory()
+        if dir_path:
+            self.custom_output_dir = dir_path
+            # Truncate for display if needed
+            display_path = dir_path
+            if len(display_path) > 30:
+                display_path = "..." + display_path[-27:]
+            
+            self.label_output_path.configure(text=display_path, text_color=("black", "white"))
+            
+    def reset_output_dir(self):
+        self.custom_output_dir = None
+        self.label_output_path.configure(text="Same as Input", text_color="gray")
 
     def drop_files(self, event):
         files_to_process = self.parse_dropped_files(event.data)
@@ -289,9 +438,74 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             self.btn_process.configure(state="disabled")
 
     def update_duration_label(self, value):
+        self.custom_crossfade_val = None
         self.label_crossfade_val.configure(text=f"{value:.1f}s")
         if self.check_length.get():
              self.check_constraints()
+
+    def get_effective_crossfade(self):
+        if self.custom_crossfade_val is not None:
+            return self.custom_crossfade_val
+        return self.slider_duration.get()
+
+    def get_effective_length(self):
+        if self.custom_length_val is not None:
+            return self.custom_length_val
+        return self.slider_length.get()
+
+    def close_active_edits(self):
+        # Force submit/close on any open entries to prevent multiple boxes
+        if self.entry_start_val.winfo_viewable():
+            self.submit_start_value(None)
+        if self.entry_crossfade_val.winfo_viewable():
+            self.submit_crossfade_value(None)
+        if self.entry_length_val.winfo_viewable():
+            self.submit_length_value(None)
+
+    def _focus_and_select(self, entry):
+        entry.focus_set()
+        entry.select_range(0, "end")
+
+    def edit_crossfade_value(self, event):
+        self.close_active_edits()
+        if self.check_crossfade.get():
+            self.label_crossfade_val.grid_remove()
+            self.entry_crossfade_val.grid(row=3, column=2, padx=5, pady=4)
+            
+            current_text = self.label_crossfade_val.cget("text").replace("s", "")
+            self.entry_crossfade_val.delete(0, "end")
+            self.entry_crossfade_val.insert(0, current_text)
+            
+            # Defer focus prevents race condition with closing other boxes
+            self.after(50, lambda: self._focus_and_select(self.entry_crossfade_val))
+
+    def submit_crossfade_value(self, event):
+        text = self.entry_crossfade_val.get()
+        try:
+            val = float(text)
+            if val < 0: val = 0.0
+            
+            self.custom_crossfade_val = val
+            self.label_crossfade_val.configure(text=f"{val:.1f}s")
+            
+            # Update Slider
+            if val <= 59.5:
+                self.slider_duration.set(val)
+            else:
+                self.slider_duration.set(59.5)
+            
+            # Re-check constraints (updates Length if needed)
+            if self.check_length.get():
+                self.check_constraints()
+                
+        except ValueError:
+            pass
+        
+        self.entry_crossfade_val.grid_remove()
+        self.label_crossfade_val.grid(row=3, column=2, padx=5, pady=4)
+
+    def update_start_label(self, value):
+        self.label_start_val.configure(text=f"{value:.1f}s")
 
     def update_quality_config(self, value=None):
         fmt = self.seg_format.get()
@@ -300,21 +514,28 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             # Slider 0 (Worst) to 17 (Best) -> CRF = 35 - val
             self.slider_quality.configure(from_=0, to=17, number_of_steps=17)
             self.slider_quality.set(12) # Default CRF 23
+            self.update_quality_label(self.slider_quality.get())
+            # Default Audio: Keep (AAC)
+            # self.var_audio_mode.set("keep")
+            
         elif fmt == "MJPEG":
-            # Q 2 (Best) to 31 (Worst)
+            # Qscale 2 (Best) to 31 (Worst)
             # Slider 0 (Worst) to 29 (Best) -> Q = 31 - val
             self.slider_quality.configure(from_=0, to=29, number_of_steps=29)
-            self.slider_quality.set(26) # Default Q 5 (31 - 26 = 5)
+            self.slider_quality.set(26) # Default Q 5
+            self.update_quality_label(self.slider_quality.get())
+
         elif fmt == "ProRes":
-            # 0:Proxy, 1:LT, 2:Std, 3:HQ
+            # Profile ID 0 (Proxy) to 3 (HQ)
             self.slider_quality.configure(from_=0, to=3, number_of_steps=3)
             self.slider_quality.set(2) # Default Standard
+            self.update_quality_label(self.slider_quality.get())
+            
         elif fmt == "HAP":
-            # 0:Hap, 1:Hap Q
+            # 0 (Hap) or 1 (Hap Q)
             self.slider_quality.configure(from_=0, to=1, number_of_steps=1)
             self.slider_quality.set(0) # Default Hap
-            
-        self.update_quality_label(self.slider_quality.get())
+            self.update_quality_label(self.slider_quality.get())
 
     def update_quality_label(self, value):
         fmt = self.seg_format.get()
@@ -347,19 +568,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             self.slider_duration.configure(state="disabled")
             self.label_crossfade_val.configure(text_color="gray")
 
-    def slider_to_time(self, value):
-        if value <= 90:
-            # 0-90 maps to 1.0 - 10.0 (0.1s per step)
-            return 1.0 + (value * 0.1)
-        else:
-            # 91-140 maps to 11.0 - 60.0 (1.0s per step)
-            return 10.0 + (value - 90)
-
-    def time_to_slider(self, time_val):
-        if time_val <= 10.0:
-            return (time_val - 1.0) * 10
-        else:
-            return 90 + (time_val - 10.0)
+    # Helpers removed (Direct mapping now)
 
 # New Focus Logic
     def set_focused_slider(self, slider):
@@ -378,18 +587,13 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         # For CTkSlider, we can approximate the step. 
         # But since we have defined 'number_of_steps', getting the step size is effectively 1 step unit.
         # However, CTkSlider.get() returns the float value.
-        # For slider_duration: range 0.1-5.0, steps 49 => step = 0.1
-        # For slider_trim: range 0-140, steps 140 => step = 1.0
-        
-        step = 1.0 # Default step size in value units
-        
         if slider == self.slider_duration:
              # Range 0.1 - 10.0, steps 99 => step 0.1
              step = 0.1
         elif slider == self.slider_start:
              step = 0.1
         elif slider == self.slider_length:
-             step = 1.0
+             step = 0.1
         elif slider == self.slider_quality:
              step = 1.0
              
@@ -417,31 +621,26 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             return
 
         # Enforce Length >= Crossfade + 0.5
-        xfade = self.slider_duration.get()
-        length_slider_val = self.slider_length.get()
-        length_time = self.slider_to_time(length_slider_val)
+        xfade = self.get_effective_crossfade()
+        # Use effective length to see current state (respecting custom values)
+        current_len = self.get_effective_length()
         
         min_len = xfade + 0.5
         
-        if length_time < min_len:
+        if current_len < min_len:
             # We need to increase length.
-            # If min_len > 10.0, we must snap to the next integer
-            if min_len > 10.0:
-               import math
-               length_time = math.ceil(min_len)
-            else:
-               length_time = min_len
+            new_len = min_len
                
-            # Update slider position (reverse map)
-            new_slider_val = self.time_to_slider(length_time)
-            
-            # Additional clamp
-            if new_slider_val > 140:
-                 new_slider_val = 140
-                 length_time = 60.0 
+            # If new requirement exceeds slider max, use custom val
+            if new_len > 60.0:
+                 self.custom_length_val = new_len
+                 self.slider_length.set(60.0)
+            else:
+                 # Fits in slider, so clear custom val to keep it simple (or keep it? No, slider covers it)
+                 self.custom_length_val = None
+                 self.slider_length.set(new_len)
                  
-            self.slider_length.set(new_slider_val)
-            self.label_length_val.configure(text=f"{length_time:.1f}s")
+            self.label_length_val.configure(text=f"{new_len:.1f}s")
 
     def toggle_start(self):
         if self.check_start.get():
@@ -452,7 +651,48 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             self.label_start_val.configure(text_color="gray")
             
     def update_start_label(self, value):
+        # If slider is moving, we discard any custom value
+        self.custom_start_val = None
         self.label_start_val.configure(text=f"{value:.1f}s")
+
+    def edit_start_value(self, event):
+        self.close_active_edits()
+        if self.check_start.get():
+            # Hide label, show entry
+            self.label_start_val.grid_remove()
+            self.entry_start_val.grid(row=2, column=2, padx=5, pady=4)
+            
+            # Set current text
+            current_text = self.label_start_val.cget("text").replace("s", "")
+            self.entry_start_val.delete(0, "end")
+            self.entry_start_val.insert(0, current_text)
+            
+            self.after(50, lambda: self._focus_and_select(self.entry_start_val))
+
+    def submit_start_value(self, event):
+        text = self.entry_start_val.get()
+        try:
+            val = float(text)
+            if val < 0: val = 0.0
+            
+            self.custom_start_val = val
+            
+            # Update label
+            self.label_start_val.configure(text=f"{val:.1f}s")
+            
+            # Update Slider (Clamp to max)
+            if val <= 60.0:
+                self.slider_start.set(val)
+            else:
+                self.slider_start.set(60.0)
+                
+        except ValueError:
+            # Invalid input, ignore
+            pass
+            
+        # Restore UI
+        self.entry_start_val.grid_remove()
+        self.label_start_val.grid(row=2, column=2, padx=5, pady=4)
 
     def toggle_length(self):
         if self.check_length.get():
@@ -464,18 +704,114 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
              self.label_length_val.configure(text_color="gray")
 
     def update_length_label(self, value):
-        time_val = self.slider_to_time(value)
-        # Check constraints immediately during drag if crossfade enabled
+        # Slider interaction resets custom value
+        self.custom_length_val = None
+        
+        time_val = value
+        
         if self.check_crossfade.get():
-            xfade = self.slider_duration.get()
+            if time_val < 0.5:
+                time_val = 0.5
+                self.slider_length.set(0.5)
+                
+            xfade = self.get_effective_crossfade()
             min_len = xfade + 0.5
             
             if time_val < min_len:
-                time_val = min_len
-                # Snap slider back
-                self.slider_length.set(self.time_to_slider(time_val))
-            
+                # REVERSE CONSTRAINT: Reduce Crossfade
+                new_xfade = time_val - 0.5
+                if new_xfade < 0:
+                    new_xfade = 0.0
+                
+                # Update Crossfade UI
+                self.custom_crossfade_val = new_xfade
+                self.label_crossfade_val.configure(text=f"{new_xfade:.1f}s")
+                
+                if new_xfade <= 59.5:
+                    self.slider_duration.set(new_xfade)
+                else:
+                    self.slider_duration.set(59.5)
+                    
         self.label_length_val.configure(text=f"{time_val:.1f}s")
+        
+    def edit_length_value(self, event):
+        self.close_active_edits()
+        if self.check_length.get():
+            self.label_length_val.grid_remove()
+            self.entry_length_val.grid(row=4, column=2, padx=5, pady=4)
+            
+            current_text = self.label_length_val.cget("text").replace("s", "")
+            self.entry_length_val.delete(0, "end")
+            self.entry_length_val.insert(0, current_text)
+            
+            self.after(50, lambda: self._focus_and_select(self.entry_length_val))
+
+    def submit_length_value(self, event):
+        text = self.entry_length_val.get()
+        try:
+            val = float(text)
+            
+            # Constraint Logic
+            if self.check_crossfade.get():
+                xfade = self.get_effective_crossfade()
+                min_len = xfade + 0.5
+                
+                if val < min_len:
+                    # REVERSE CONSTRAINT: Reduce Crossfade instead of increasing Length
+                    new_xfade = val - 0.5
+                    
+                    if new_xfade < 0:
+                        new_xfade = 0.0
+                        val = 0.5 # Minimum length if crossfade is enabled (0 + 0.5)
+                        
+                    # Update Crossfade values
+                    self.custom_crossfade_val = new_xfade
+                    self.label_crossfade_val.configure(text=f"{new_xfade:.1f}s")
+                    
+                    if new_xfade <= 59.5:
+                        self.slider_duration.set(new_xfade)
+                    else:
+                         self.slider_duration.set(59.5)
+                         
+            elif val < 0:
+                val = 0.0
+            
+            self.custom_length_val = val
+            self.label_length_val.configure(text=f"{val:.1f}s")
+            
+            # Update Slider
+            if val <= 60.0:
+                self.slider_length.set(val)
+            else:
+                self.slider_length.set(60.0)
+                
+        except ValueError:
+            pass
+            
+        self.entry_length_val.grid_remove()
+        self.label_length_val.grid(row=4, column=2, padx=5, pady=4)
+
+    def toggle_scale(self):
+        state = "normal" if self.check_scale.get() else "disabled"
+        self.btn_4k.configure(state=state)
+        self.btn_1080.configure(state=state)
+        self.btn_720.configure(state=state)
+        self.entry_width.configure(state=state)
+        self.entry_height.configure(state=state)
+        if state == "disabled":
+            self.entry_width.delete(0, "end")
+            self.entry_height.delete(0, "end")
+            
+    def set_scale(self, w, h):
+        if not self.check_scale.get(): return
+        self.entry_width.delete(0, "end")
+        self.entry_width.insert(0, str(w))
+        self.entry_height.delete(0, "end")
+        self.entry_height.insert(0, str(h))
+
+    def on_length_release(self, event):
+        # Snap back logic removed (Real-time updates handle it)
+        self.set_focused_slider(self.slider_length)
 
     def log(self, message):
         self.textbox_log.insert("end", message + "\n")
@@ -489,17 +825,23 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             self.log("Error: No files selected in queue!")
             return
 
-        duration = self.slider_duration.get()
+        duration = self.get_effective_crossfade()
         fmt = self.seg_format.get().lower()
         enable_crossfade = bool(self.check_crossfade.get())
         
         target_length = None
         if self.check_length.get():
-            target_length = self.slider_to_time(self.slider_length.get())
+            if self.custom_length_val is not None:
+                target_length = self.custom_length_val
+            else:
+                target_length = self.slider_length.get()
             
         start_offset = 0.0
         if self.check_start.get():
-            start_offset = self.slider_start.get()
+            if self.custom_start_val is not None:
+                start_offset = self.custom_start_val
+            else:
+                start_offset = self.slider_start.get()
 
         # Calculate actual quality param
         raw_q_val = int(self.slider_quality.get())
@@ -514,6 +856,23 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         elif fmt == "hap":
             quality_val = "hap" if raw_q_val == 0 else "hap_q"
 
+        
+        # Audio mode
+        # audio_mode = self.var_audio_mode.get()
+
+        # Scale
+        scale_val = None
+        if self.check_scale.get():
+            try:
+                w = int(self.entry_width.get())
+                h = int(self.entry_height.get())
+                if w > 0 and h > 0:
+                    scale_val = (w, h)
+                else:
+                    self.log("Warning: Invalid scale dimensions ignored.")
+            except ValueError:
+                self.log("Warning: Invalid scale input (must be integers). Ignored.")
+
         # Filename options
         name_mode = self.var_name_mode.get()
         name_text = self.entry_name_text.get()
@@ -525,17 +884,18 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.is_processing = True
         
         # Run in thread
-        threading.Thread(target=self.run_batch, args=(active_files, duration, fmt, target_length, enable_crossfade, start_offset, quality_val, name_mode, name_text)).start()
+        threading.Thread(target=self.run_batch, args=(active_files, duration, fmt, target_length, enable_crossfade, start_offset, quality_val, name_mode, name_text, scale_val)).start()
 
-    def run_batch(self, files, duration, fmt, target_length=None, enable_crossfade=True, start_offset=0.0, quality_val=None, name_mode="Append", name_text=" loop"):
+    def run_batch(self, files, duration, fmt, target_length=None, enable_crossfade=True, start_offset=0.0, quality_val=None, name_mode="Append", name_text="_oopl", scale_val=None):
         try:
             total = len(files)
             success_count = 0
             
-            # Ensure output dir exists
-            output_dir = os.path.join(os.getcwd(), "outputs")
-            os.makedirs(output_dir, exist_ok=True)
-            self.log(f"Output directory: {output_dir}")
+            # Remove hardcoded global output_dir creation
+            if self.custom_output_dir:
+                self.log(f"Output mode: Custom -> {self.custom_output_dir}")
+            else:
+                self.log(f"Output mode: Same as Input File")
 
             for i, file_path in enumerate(files, 1):
                 if not self.is_processing:
@@ -555,7 +915,13 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                     else:
                         out_name = f"{name_text}{base_name}.{ext}"
                         
-                    output_path = process_video_crossfade(file_path, duration, fmt, target_output_duration=target_length, output_dir=output_dir, enable_crossfade=enable_crossfade, start_offset=start_offset, quality_val=quality_val, output_filename=out_name)
+                    # Determine Output Directory for this file
+                    if self.custom_output_dir:
+                        file_output_dir = self.custom_output_dir
+                    else:
+                        file_output_dir = os.path.dirname(file_path)
+                        
+                    output_path = process_video_crossfade(file_path, duration, fmt, target_output_duration=target_length, output_dir=file_output_dir, enable_crossfade=enable_crossfade, start_offset=start_offset, quality_val=quality_val, output_filename=out_name, target_resolution=scale_val)
                     self.log(f" -> Completed: {os.path.basename(output_path)}")
                     success_count += 1
                 except Exception as e:

@@ -39,9 +39,10 @@ def get_video_duration(input_file):
         print(f"Error probing file {input_file}: {e}")
         return None
 
-def process_video_crossfade(input_file, crossfade_duration, output_format="mp4", target_output_duration=None, output_dir="outputs", enable_crossfade=True, start_offset=0.0, quality_val=None, output_filename=None):
+def process_video_crossfade(input_file, crossfade_duration, output_format="mp4", target_output_duration=None, output_dir="outputs", enable_crossfade=True, start_offset=0.0, quality_val=None, output_filename=None, target_resolution=None):
     """
     Takes a video file, finds its duration, and creates a crossfaded loop.
+    target_resolution: tuple (width, height) or None
     """
     
     # Old: output_filename = f"processed_{os.path.basename(input_file)}"
@@ -127,20 +128,27 @@ def process_video_crossfade(input_file, crossfade_duration, output_format="mp4",
         head_end = F_eff
         
         # Determine Source Node
-        # If start_offset > 0, we trim first.
-        # However, to avoid complexity with re-calculating everything relative to 0 timestamp repeatedly,
-        # we can just chain filters.
+        # Chain filters: [0:v] -> [v_trim] -> [v_scaled] -> split
         
-        input_node = "[0:v]"
+        current_node = "[0:v]"
         setup_filter = ""
         
+        # 1. Trim/Seek
         if start_offset > 0:
-             setup_filter = f"[0:v]trim=start={start_offset},setpts=PTS-STARTPTS[v_main];"
-             input_node = "[v_main]"
+             setup_filter += f"[0:v]trim=start={start_offset},setpts=PTS-STARTPTS[v_main];"
+             current_node = "[v_main]"
+             
+        # 2. Scale
+        if target_resolution:
+            w, h = target_resolution
+            # Chain from current_node
+            # We implicitly stretch if aspect ratio differs (default behavior of scale=w:h)
+            setup_filter += f"{current_node}scale={w}:{h}[v_scaled];"
+            current_node = "[v_scaled]"
         
         filter_complex = (
             f"{setup_filter}"
-            f"{input_node}split=3[v_body][v_tail][v_head];"
+            f"{current_node}split=3[v_body][v_tail][v_head];"
             f"[v_body]trim=start={body_start}:end={body_end},setpts=PTS-STARTPTS[body];"
             f"[v_tail]trim=start={tail_start}:end={tail_end},setpts=PTS-STARTPTS[tail];"
             f"[v_head]trim=start=0:end={head_end},setpts=PTS-STARTPTS[head];"
@@ -148,10 +156,7 @@ def process_video_crossfade(input_file, crossfade_duration, output_format="mp4",
             f"[body][turn]concat=n=2:v=1:a=0[outv]"
         )
     else:
-        # No crossfade logic. Just pass through or trim.
-        # If target_output_duration is set, we use -t in the main cmd construction or here.
-        # We can't use -t easily with filter_complex if we aren't filtering.
-        # But we want to re-encode to the target format.
+        # No crossfade logic.
         pass
 
     cmd = [
@@ -168,13 +173,18 @@ def process_video_crossfade(input_file, crossfade_duration, output_format="mp4",
         cmd.extend(["-filter_complex", filter_complex, "-map", "[outv]"])
     else:
         # Simple processing
-        # if start_offset was used with -ss before -i, timestamps are reset to 0.
-        pass
+        
+        # Apply scaling if needed via -vf
+        video_filters = []
+        if target_resolution:
+            w, h = target_resolution
+            video_filters.append(f"scale={w}:{h}")
+            
+        if video_filters:
+            cmd.extend(["-vf", ",".join(video_filters)])
         
         if target_output_duration:
             cmd.extend(["-t", str(target_output_duration)])
-        # No map needed, maps 0:v by default hopefully, or we force it?
-        # cmd.extend(["-map", "0:v"]) # Safer
     
     
     if output_format == "hap":

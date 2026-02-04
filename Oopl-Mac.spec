@@ -73,6 +73,6 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='Oopl.app',
-    icon=None,
+    icon='assets/icon.png',
     bundle_identifier='com.antigravity.oopl',
 )

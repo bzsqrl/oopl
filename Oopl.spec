@@ -5,7 +5,11 @@ a = Analysis(
     ['desktop_app\\main_gui.py'],
     pathex=[],
     binaries=[('C:\\ffmpeg\\ffmpeg.exe', '.'), ('C:\\ffmpeg\\ffprobe.exe', '.')],
-    datas=[('c:\\users\\beatf\\appdata\\local\\programs\\python\\python310\\lib\\site-packages\\customtkinter', 'customtkinter/'), ('c:\\users\\beatf\\appdata\\local\\programs\\python\\python310\\lib\\site-packages\\tkinterdnd2', 'tkinterdnd2/')],
+    datas=[
+        ('c:\\users\\beatf\\appdata\\local\\programs\\python\\python310\\lib\\site-packages\\customtkinter', 'customtkinter/'), 
+        ('c:\\users\\beatf\\appdata\\local\\programs\\python\\python310\\lib\\site-packages\\tkinterdnd2', 'tkinterdnd2/'),
+        ('assets', 'assets')
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -35,4 +39,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='assets\\icon.ico',
 )

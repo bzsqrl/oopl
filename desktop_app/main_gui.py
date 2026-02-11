@@ -4,6 +4,7 @@ import os
 import threading
 import sys
 import webbrowser
+import math
 import glob
 from PIL import Image, ImageTk
 from processor import process_video_crossfade
@@ -122,7 +123,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.check_crossfade.select() # Default ON
         self.check_crossfade.grid(row=3, column=0, padx=10, pady=4, sticky="w")
         
-        self.slider_duration = ctk.CTkSlider(self.frame_settings, from_=0, to=59.5, number_of_steps=595, command=self.update_duration_label)
+        self.slider_duration = ctk.CTkSlider(self.frame_settings, from_=0.5, to=31.5, number_of_steps=62, command=self.update_duration_label)
         self.slider_duration.set(1.0)
         self.slider_duration.grid(row=3, column=1, padx=10, pady=4, sticky="ew")
         
@@ -140,7 +141,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.check_start = ctk.CTkCheckBox(self.frame_settings, text="Set Start", command=self.toggle_start)
         self.check_start.grid(row=2, column=0, padx=10, pady=4, sticky="w")
         
-        self.slider_start = ctk.CTkSlider(self.frame_settings, from_=0, to=60.0, number_of_steps=600, command=self.update_start_label, state="disabled")
+        self.slider_start = ctk.CTkSlider(self.frame_settings, from_=0, to=60.0, number_of_steps=120, command=self.update_start_label, state="disabled")
         self.slider_start.set(0.0)
         self.slider_start.grid(row=2, column=1, padx=10, pady=4, sticky="ew")
         
@@ -159,7 +160,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.check_length = ctk.CTkCheckBox(self.frame_settings, text="Set Length", command=self.toggle_length)
         self.check_length.grid(row=4, column=0, padx=10, pady=4, sticky="w")
         
-        self.slider_length = ctk.CTkSlider(self.frame_settings, from_=0, to=60.0, number_of_steps=600, command=self.update_length_label, state="disabled")
+        self.slider_length = ctk.CTkSlider(self.frame_settings, from_=1, to=32, number_of_steps=62, command=self.update_length_label, state="disabled")
         self.slider_length.set(10.0)
         self.slider_length.grid(row=4, column=1, padx=10, pady=4, sticky="ew")
         
@@ -441,7 +442,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.custom_crossfade_val = None
         self.label_crossfade_val.configure(text=f"{value:.1f}s")
         if self.check_length.get():
-             self.check_constraints()
+             self.check_constraints(proposed_crossfade=value)
 
     def get_effective_crossfade(self):
         if self.custom_crossfade_val is not None:
@@ -484,15 +485,17 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         try:
             val = float(text)
             if val < 0: val = 0.0
+            # FFmpeg xfade filter has a hard limit of 60 seconds
+            if val > 60.0: val = 60.0
             
             self.custom_crossfade_val = val
             self.label_crossfade_val.configure(text=f"{val:.1f}s")
             
             # Update Slider
-            if val <= 59.5:
+            if val <= 31.5:
                 self.slider_duration.set(val)
             else:
-                self.slider_duration.set(59.5)
+                self.slider_duration.set(31.5)
             
             # Re-check constraints (updates Length if needed)
             if self.check_length.get():
@@ -588,12 +591,12 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         # But since we have defined 'number_of_steps', getting the step size is effectively 1 step unit.
         # However, CTkSlider.get() returns the float value.
         if slider == self.slider_duration:
-             # Range 0.1 - 10.0, steps 99 => step 0.1
-             step = 0.1
+             # Range 0.5 - 31.5
+             step = 0.5
         elif slider == self.slider_start:
-             step = 0.1
+             step = 0.5
         elif slider == self.slider_length:
-             step = 0.1
+             step = 0.5
         elif slider == self.slider_quality:
              step = 1.0
              
@@ -615,13 +618,16 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         elif slider == self.slider_quality:
             self.update_quality_label(new_val)
 
-    def check_constraints(self):
+    def check_constraints(self, proposed_crossfade=None):
         # Ignore if Crossfade is disabled
         if not self.check_crossfade.get():
             return
 
         # Enforce Length >= Crossfade + 0.5
-        xfade = self.get_effective_crossfade()
+        if proposed_crossfade is not None:
+            xfade = proposed_crossfade
+        else:
+            xfade = self.get_effective_crossfade()
         # Use effective length to see current state (respecting custom values)
         current_len = self.get_effective_length()
         
@@ -629,12 +635,16 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         
         if current_len < min_len:
             # We need to increase length.
-            new_len = min_len
+            # Round UP to nearest 0.5 step
+            # min_len is already aligned to 0.5 steps (e.g. 20.0 + 0.5 = 20.5)
+            # but math.ceil would make it integer (21).
+            # We use math.ceil(x * 2) / 2 logic.
+            new_len = math.ceil(min_len * 2) / 2
                
             # If new requirement exceeds slider max, use custom val
-            if new_len > 60.0:
+            if new_len > 32.0:
                  self.custom_length_val = new_len
-                 self.slider_length.set(60.0)
+                 self.slider_length.set(32.0)
             else:
                  # Fits in slider, so clear custom val to keep it simple (or keep it? No, slider covers it)
                  self.custom_length_val = None
@@ -727,10 +737,10 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                 self.custom_crossfade_val = new_xfade
                 self.label_crossfade_val.configure(text=f"{new_xfade:.1f}s")
                 
-                if new_xfade <= 59.5:
+                if new_xfade <= 31.5:
                     self.slider_duration.set(new_xfade)
                 else:
-                    self.slider_duration.set(59.5)
+                    self.slider_duration.set(31.5)
                     
         self.label_length_val.configure(text=f"{time_val:.1f}s")
         
@@ -768,10 +778,10 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                     self.custom_crossfade_val = new_xfade
                     self.label_crossfade_val.configure(text=f"{new_xfade:.1f}s")
                     
-                    if new_xfade <= 59.5:
+                    if new_xfade <= 31.5:
                         self.slider_duration.set(new_xfade)
                     else:
-                         self.slider_duration.set(59.5)
+                         self.slider_duration.set(31.5)
                          
             elif val < 0:
                 val = 0.0
@@ -780,10 +790,10 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             self.label_length_val.configure(text=f"{val:.1f}s")
             
             # Update Slider
-            if val <= 60.0:
+            if val <= 32.0:
                 self.slider_length.set(val)
             else:
-                self.slider_length.set(60.0)
+                self.slider_length.set(32.0)
                 
         except ValueError:
             pass

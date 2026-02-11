@@ -63,19 +63,19 @@ Control output file size and visual fidelity. The slider adapts based on your se
 #### Set Start (Trimming Input)
 Ignore the beginning of a video clip (e.g., to skip an intro or unstable camera move).
 -   **Enable**: Check "Set Start".
--   **Adjust**: Use the slider (0-60s) to seek into the video.
+-   **Adjust**: Use the slider (0-60s, 0.5s steps) to seek into the video.
 -   **Precise Input**: Click the number label (e.g., "0.0s") to type an exact value.
 
 #### Crossfade
 -   **Enable/Disable**: Toggle the checkbox to turn crossfading on or off.
--   **Duration**: Set blend time (0.1s to 59.5s).
+-   **Duration**: Set blend time (0.5s to 31.5s).
 -   **Precise Input**: Click the label to type exact seconds.
 -   *Tip*: A 1.0s crossfade is usually sufficient for smooth loops.
 
 #### Set Length (Trimming Output)
 Define the exact duration of your final loop.
 -   **Enable**: Check "Set Length".
--   **Adjust**: Use the slider (0.0s to 60.0s).
+-   **Adjust**: Use the slider (1s to 32s, 0.5s steps).
 -   **Precise Input**: Click the label to type an exact value.
 -   **Smart Constraints**: The app ensures length is at least `Crossfade + 0.5s`.
 

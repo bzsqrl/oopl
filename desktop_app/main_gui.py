@@ -48,7 +48,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         ico_path = os.path.join(asset_dir, "icon.ico")
         png_path = os.path.join(asset_dir, "icon.png")
         
-        if os.path.exists(ico_path):
+        if sys.platform == "win32" and os.path.exists(ico_path):
             try:
                 self.iconbitmap(ico_path)
             except Exception as e:

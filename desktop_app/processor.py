@@ -15,9 +15,11 @@ def _find_binary(name):
     else:
         # Running from source: use the project's libs/ folder (same binaries the build bundles)
         base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "libs")
-    bundled = os.path.join(base_path, exe_name)
-    if os.path.exists(bundled):
-        return bundled
+    # The Mac bundle keeps binaries in bin/: a bare "ffmpeg" at the bundle root
+    # collides with the ffmpeg-python package and breaks "import ffmpeg"
+    for bundled in (os.path.join(base_path, "bin", exe_name), os.path.join(base_path, exe_name)):
+        if os.path.isfile(bundled):
+            return bundled
     return name # Fallback to system PATH
 
 def get_ffmpeg_path():

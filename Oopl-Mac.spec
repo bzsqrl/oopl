@@ -18,7 +18,8 @@ ffprobe_path = './libs/ffprobe'  # Path to your ffprobe binary
 for path in (ffmpeg_path, ffprobe_path):
     if not os.path.exists(path):
         raise SystemExit(f"Missing {path} - see BUILD_INSTRUCTIONS.md")
-binaries_list = [(ffmpeg_path, '.'), (ffprobe_path, '.')]
+# Into bin/, not '.': a top-level "ffmpeg" file shadows the ffmpeg-python package
+binaries_list = [(ffmpeg_path, 'bin'), (ffprobe_path, 'bin')]
 
 # ----------------------------------------------------------------------------
 

@@ -44,7 +44,7 @@ This section explains how to run and build Oopl on macOS.
     ```bash
     python desktop_app/main_gui.py
     ```
-    *Note: Ensure `ffmpeg` is reachable in your system PATH, or the app won't find it.*
+    *Note: The app uses `libs/ffmpeg` and `libs/ffprobe` if present (see below), otherwise falls back to `ffmpeg`/`ffprobe` on your PATH.*
 
 ## Building the .app Bundle
 
@@ -63,6 +63,11 @@ Unlike Windows where we assume a fixed path, for Mac you should place the `ffmpe
     ```bash
     chmod +x libs/ffmpeg libs/ffprobe
     ```
+5.  Confirm `ffmpeg` has the HAP encoder (some builds omit it, which silently breaks HAP export):
+    ```bash
+    ./libs/ffmpeg -hide_banner -encoders | grep -E ' (hap|dxv) '
+    ```
+    Both `hap` and `dxv` should be listed. If `hap` is missing, use a different build (or `brew install ffmpeg` and copy its binaries, noting Homebrew builds are dynamically linked and won't run on other Macs).
 
 ### 2. Run Build
 Use the provided Mac spec file:

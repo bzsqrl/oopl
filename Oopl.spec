@@ -1,13 +1,23 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
+import customtkinter
+import tkinterdnd2
 
+# FFmpeg binaries are bundled from libs\ (see BUILD_INSTRUCTIONS.md).
+# ffmpeg.exe must be a "full" build - the "essentials" build has no HAP encoder.
+ffmpeg_path = os.path.join('libs', 'ffmpeg.exe')
+ffprobe_path = os.path.join('libs', 'ffprobe.exe')
+for path in (ffmpeg_path, ffprobe_path):
+    if not os.path.exists(path):
+        raise SystemExit(f"Missing {path} - see BUILD_INSTRUCTIONS.md")
 
 a = Analysis(
     ['desktop_app\\main_gui.py'],
     pathex=[],
-    binaries=[('C:\\ffmpeg\\ffmpeg.exe', '.'), ('C:\\ffmpeg\\ffprobe.exe', '.')],
+    binaries=[(ffmpeg_path, '.'), (ffprobe_path, '.')],
     datas=[
-        ('c:\\users\\beatf\\appdata\\local\\programs\\python\\python310\\lib\\site-packages\\customtkinter', 'customtkinter/'), 
-        ('c:\\users\\beatf\\appdata\\local\\programs\\python\\python310\\lib\\site-packages\\tkinterdnd2', 'tkinterdnd2/'),
+        (os.path.dirname(customtkinter.__file__), 'customtkinter/'),
+        (os.path.dirname(tkinterdnd2.__file__), 'tkinterdnd2/'),
         ('assets', 'assets')
     ],
     hiddenimports=[],

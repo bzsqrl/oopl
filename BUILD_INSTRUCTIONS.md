@@ -1,6 +1,22 @@
-# Oopl Build Instructions for macOS
+# Oopl Build Instructions
 
-This guide explains how to run and build Oopl on macOS.
+## Windows
+
+1.  Install dependencies: `pip install -r desktop_app/requirements.txt`
+2.  Create a `libs` folder in the project root containing:
+    - `ffmpeg.exe` — must be a **full** build (e.g. `ffmpeg-release-full.7z` from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/)). The "essentials" build has **no HAP encoder**.
+    - `ffprobe.exe` — any build (only used to read durations; the essentials one is fine and much smaller).
+    - The FFmpeg `LICENSE` file (FFmpeg builds are GPL; ship the license with the app).
+3.  Run from source: `python desktop_app/main_gui.py` (uses `libs/` automatically, falling back to `ffmpeg` on PATH).
+4.  Build: `pyinstaller Oopl.spec` → `dist/Oopl.exe`. The build stops with an error if `libs/` is missing a binary.
+
+`libs/` is gitignored because the binaries are large.
+
+---
+
+## macOS
+
+This section explains how to run and build Oopl on macOS.
 
 ## Prerequisites
 

@@ -2,12 +2,12 @@ import customtkinter as ctk
 from tkinterdnd2 import TkinterDnD, DND_FILES
 import os
 import threading
+import queue
 import sys
 import webbrowser
 import math
-import glob
 from PIL import Image, ImageTk
-from processor import process_video_crossfade
+from processor import process_video_crossfade, get_video_duration
 
 # Configuration
 ctk.set_appearance_mode("Dark")
@@ -18,7 +18,6 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         super().__init__()
         self.TkdndVersion = TkinterDnD._require(self)
 
-        self.title("Oopl - VJ Loop Crossfader")
         self.title("Oopl - VJ Loop Crossfader")
         self.geometry("550x720")
         self.minsize(500, 550)
@@ -36,7 +35,6 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         # --- Icon & Branding ---
         # Determine path to assets
         if getattr(sys, 'frozen', False):
-            base_path = sys._MEIPASS
             asset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets")
             # Fallback if mapped differently
             if not os.path.exists(asset_dir):
@@ -102,7 +100,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.label_format = ctk.CTkLabel(self.frame_settings, text="Format:")
         self.label_format.grid(row=0, column=0, padx=10, pady=4)
 
-        self.seg_format = ctk.CTkSegmentedButton(self.frame_settings, values=["MP4", "HAP", "ProRes", "MJPEG"], command=self.update_quality_config)
+        self.seg_format = ctk.CTkSegmentedButton(self.frame_settings, values=["MP4", "HAP", "DXV", "ProRes", "MJPEG"], command=self.update_quality_config)
         self.seg_format.set("MP4")
         self.seg_format.grid(row=0, column=1, padx=10, pady=4, sticky="ew")
 
@@ -290,6 +288,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.scroll_queue = ctk.CTkScrollableFrame(self.frame_queue_container, height=150) # Height is relative now
         self.scroll_queue.grid(row=0, column=0, sticky="nsew")
         self.scroll_queue.grid_columnconfigure(0, weight=1)
+        self.scroll_queue.grid_columnconfigure(1, weight=0)
+        self.scroll_queue.grid_columnconfigure(2, weight=0)
 
         # Process Button (Row 3)
         self.btn_process = ctk.CTkButton(self, text="Start Batch", command=self.start_processing, state="disabled")
@@ -394,6 +394,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
 
     def add_files_to_queue(self, paths):
         added_count = 0
+        pending_durations = [] # (path, label) pairs probed in the background
         existing_paths = {item['path'] for item in self.queue_items}
         
         for path in paths:
@@ -407,14 +408,29 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                 chk = ctk.CTkCheckBox(self.scroll_queue, text=filename, variable=chk_var)
                 chk.grid(row=len(self.queue_items), column=0, padx=5, pady=2, sticky="w")
                 
+                # Duration Label (filled in by background probe)
+                lbl_dur = ctk.CTkLabel(self.scroll_queue, text="...", font=("Arial", 11), text_color="gray")
+                lbl_dur.grid(row=len(self.queue_items), column=1, padx=(10, 5), pady=2, sticky="e")
+                pending_durations.append((path, lbl_dur))
+
+                # Remove Button
+                btn_del = ctk.CTkButton(self.scroll_queue, text="X", width=20, height=20, fg_color="firebrick", hover_color="maroon", 
+                                        command=lambda p=path: self.remove_from_queue(p))
+                btn_del.grid(row=len(self.queue_items), column=2, padx=5, pady=2, sticky="e")
+
                 self.queue_items.append({
                     'path': path,
                     'var': chk_var,
-                    'widget': chk
+                    'widget': chk,
+                    'duration_label': lbl_dur,
+                    'remove_btn': btn_del
                 })
                 existing_paths.add(path)
                 added_count += 1
         
+        if pending_durations:
+            self.start_duration_probe(pending_durations)
+
         if added_count > 0:
             self.log(f"Added {added_count} file(s) to queue.")
         else:
@@ -422,12 +438,76 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             
         self.update_status()
 
+    def start_duration_probe(self, pending):
+        # ffprobe can take a while per file, so probe in a worker thread.
+        # Tk widgets must only be touched from the main thread, so results
+        # come back through a queue that the main thread polls.
+        results = queue.Queue()
+
+        def worker():
+            for path, label in pending:
+                duration = get_video_duration(path)
+                results.put((label, f"{duration:.1f}s" if duration is not None else "---"))
+
+        threading.Thread(target=worker, daemon=True).start()
+        self.after(100, self.poll_durations, results, len(pending))
+
+    def poll_durations(self, results, remaining):
+        while True:
+            try:
+                label, text = results.get_nowait()
+            except queue.Empty:
+                break
+            remaining -= 1
+            # The item may have been removed from the queue while probing
+            if label.winfo_exists():
+                label.configure(text=text)
+        if remaining > 0:
+            self.after(100, self.poll_durations, results, remaining)
+
     def clear_queue(self):
         for item in self.queue_items:
             item['widget'].destroy()
+            if 'duration_label' in item:
+                item['duration_label'].destroy()
+            if 'remove_btn' in item:
+                item['remove_btn'].destroy()
         self.queue_items.clear()
         self.log("Queue cleared.")
         self.update_status()
+
+    def remove_from_queue(self, path):
+        # Find item
+        item_to_remove = None
+        for item in self.queue_items:
+            if item['path'] == path:
+                item_to_remove = item
+                break
+        
+        if item_to_remove:
+            # Destroy widgets
+            item_to_remove['widget'].destroy()
+            if 'duration_label' in item_to_remove:
+                item_to_remove['duration_label'].destroy()
+            if 'remove_btn' in item_to_remove:
+                item_to_remove['remove_btn'].destroy()
+            
+            # Remove from list
+            self.queue_items.remove(item_to_remove)
+            
+            # Update UI
+            self.regrid_queue_items()
+            self.update_status()
+            self.log("Removed individual file from queue.")
+
+    def regrid_queue_items(self):
+        # Reset grid for all remaining items to fill gaps
+        for i, item in enumerate(self.queue_items):
+            item['widget'].grid(row=i, column=0, padx=5, pady=2, sticky="w")
+            if 'duration_label' in item:
+                item['duration_label'].grid(row=i, column=1, padx=(10, 5), pady=2, sticky="e")
+            if 'remove_btn' in item:
+                item['remove_btn'].grid(row=i, column=2, padx=5, pady=2, sticky="e")
 
     def update_status(self):
         count = len(self.queue_items)
@@ -507,11 +587,10 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.entry_crossfade_val.grid_remove()
         self.label_crossfade_val.grid(row=3, column=2, padx=5, pady=4)
 
-    def update_start_label(self, value):
-        self.label_start_val.configure(text=f"{value:.1f}s")
-
     def update_quality_config(self, value=None):
         fmt = self.seg_format.get()
+        # DXV disables the slider; re-enable for all other formats
+        self.slider_quality.configure(state="normal")
         if fmt == "MP4":
             # CRF 18 (Best) to 35 (Worst)
             # Slider 0 (Worst) to 17 (Best) -> CRF = 35 - val
@@ -540,6 +619,13 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             self.slider_quality.set(0) # Default Hap
             self.update_quality_label(self.slider_quality.get())
 
+        elif fmt == "DXV":
+            # FFmpeg's DXV encoder only supports DXT1 (Normal), so there is nothing to choose
+            self.slider_quality.configure(from_=0, to=1, number_of_steps=1)
+            self.slider_quality.set(0)
+            self.slider_quality.configure(state="disabled")
+            self.update_quality_label(self.slider_quality.get())
+
     def update_quality_label(self, value):
         fmt = self.seg_format.get()
         val = int(value)
@@ -559,6 +645,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             labels = ["Hap", "Hap Q"]
             idx = max(0, min(1, val))
             self.label_quality_val.configure(text=labels[idx])
+        elif fmt == "DXV":
+            self.label_quality_val.configure(text="Normal")
 
     def toggle_crossfade(self):
         if self.check_crossfade.get():
@@ -865,6 +953,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             quality_val = raw_q_val # Profile ID
         elif fmt == "hap":
             quality_val = "hap" if raw_q_val == 0 else "hap_q"
+        elif fmt == "dxv":
+            quality_val = "dxt1"
 
         
         # Audio mode
@@ -905,7 +995,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             if self.custom_output_dir:
                 self.log(f"Output mode: Custom -> {self.custom_output_dir}")
             else:
-                self.log(f"Output mode: Same as Input File")
+                self.log("Output mode: Same as Input File")
 
             for i, file_path in enumerate(files, 1):
                 if not self.is_processing:
@@ -918,7 +1008,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                     # Construct Filename
                     base_name = os.path.splitext(os.path.basename(file_path))[0]
                     ext = "mp4"
-                    if fmt in ["hap", "prores", "mjpeg"]: ext = "mov"
+                    if fmt in ["hap", "prores", "dxv", "mjpeg"]: ext = "mov"
                     
                     if name_mode == "Append":
                         out_name = f"{base_name}{name_text}.{ext}"

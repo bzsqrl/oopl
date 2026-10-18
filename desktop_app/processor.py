@@ -1,33 +1,30 @@
 import ffmpeg
 import os
 import subprocess
-import json
 
 import sys
 
 import platform
 
-def get_ffmpeg_path():
-    """Get absolute path to resource, works for dev and for PyInstaller"""
+def _find_binary(name):
+    """Get absolute path to a bundled binary, works for dev and for PyInstaller"""
+    exe_name = f"{name}.exe" if platform.system() == "Windows" else name
     if getattr(sys, 'frozen', False):
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
-        exe_name = "ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg"
-        ffmpeg_exe = os.path.join(base_path, exe_name)
-        if os.path.exists(ffmpeg_exe):
-            return ffmpeg_exe
-    return "ffmpeg" # Fallback to system PATH
+    else:
+        # Running from source: use the project's libs/ folder (same binaries the build bundles)
+        base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "libs")
+    bundled = os.path.join(base_path, exe_name)
+    if os.path.exists(bundled):
+        return bundled
+    return name # Fallback to system PATH
+
+def get_ffmpeg_path():
+    return _find_binary("ffmpeg")
 
 def get_ffprobe_path():
-    """Get absolute path to resource, works for dev and for PyInstaller"""
-    if getattr(sys, 'frozen', False):
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-        exe_name = "ffprobe.exe" if platform.system() == "Windows" else "ffprobe"
-        ffprobe_exe = os.path.join(base_path, exe_name)
-        if os.path.exists(ffprobe_exe):
-            return ffprobe_exe
-    return "ffprobe" # Fallback to system PATH
+    return _find_binary("ffprobe")
 
 def get_video_duration(input_file):
     ffprobe_cmd = get_ffprobe_path()
@@ -51,7 +48,7 @@ def process_video_crossfade(input_file, crossfade_duration, output_format="mp4",
     
     # Determine extension
     ext = "mp4"
-    if output_format == "hap" or output_format == "prores" or output_format == "mjpeg":
+    if output_format == "hap" or output_format == "prores" or output_format == "mjpeg" or output_format == "dxv":
         ext = "mov"
         
     if output_filename:
@@ -191,6 +188,11 @@ def process_video_crossfade(input_file, crossfade_duration, output_format="mp4",
         # HAP: Expect "hap" or "hap_q"
         val = quality_val if quality_val else "hap"
         cmd.extend(["-c:v", "hap", "-format", val])
+        
+    elif output_format == "dxv":
+        # DXV: FFmpeg's encoder only supports "dxt1" (Normal Quality, No Alpha)
+        val = quality_val if quality_val else "dxt1"
+        cmd.extend(["-c:v", "dxv", "-format", val])
         
     elif output_format == "prores":
         # ProRes 422: Expect "0", "1", "2", "3"

@@ -42,3 +42,6 @@ Thumbs.db
 # IDEs
 .vscode/
 .idea/
+
+# Bundled FFmpeg binaries (large; see BUILD_INSTRUCTIONS.md)
+libs/

@@ -40,6 +40,8 @@ You can batch process multiple videos at once. Use the **Queue** section to mana
     -   **Drag & Drop**: Simply drag files or folders directly onto the application window.
     -   *Supported Formats*: .mp4, .mov, .avi, .mkv, and most common video formats.
 -   **Selection**: Use the **checkboxes** next to each file to include or exclude them from the current batch.
+-   **Duration**: Each file's length is shown to the right of its name.
+-   **Remove**: Click the red **`X`** next to a file to remove just that file.
 -   **Clear**: Click the **`Clear`** button (red) to remove all items from the list.
 
 ### 2. Settings & Configuration
@@ -48,7 +50,8 @@ Adjust how your loops are created.
 #### Format
 Choose the output video codec:
 -   **MP4** (H.264): Standard, highly compatible.
--   **HAP**: Integrity-optimized codec for VJ software (Resolume, VDMX).
+-   **HAP**: GPU-accelerated codec for VJ software (Resolume, VDMX).
+-   **DXV**: Resolume's native codec (DXV3 Normal Quality).
 -   **ProRes**: Industry standard for editing and high quality.
 -   **MJPEG**: Good balance of performance and quality.
 
@@ -58,24 +61,25 @@ Control output file size and visual fidelity. The slider adapts based on your se
 -   **MJPEG**: Controls **Q** (Quantization). Range: 2 (Best) to 31 (Low).
 -   **ProRes**: Selects Profile: **Proxy, LT, Standard, HQ**.
 -   **HAP**: Selects Format: **Hap** or **Hap Q** (Higher Quality).
+-   **DXV**: Fixed at **Normal** (DXT1, no alpha) — the only DXV mode FFmpeg can encode, so the slider is disabled.
 > **Visual Rule**: Moving the slider to the **Right** always improves quality (and likely increases file size).
 
 #### Set Start (Trimming Input)
 Ignore the beginning of a video clip (e.g., to skip an intro or unstable camera move).
 -   **Enable**: Check "Set Start".
--   **Adjust**: Use the slider (0-60s) to seek into the video.
+-   **Adjust**: Use the slider (0-60s, 0.5s steps) to seek into the video.
 -   **Precise Input**: Click the number label (e.g., "0.0s") to type an exact value.
 
 #### Crossfade
 -   **Enable/Disable**: Toggle the checkbox to turn crossfading on or off.
--   **Duration**: Set blend time (0.1s to 59.5s).
--   **Precise Input**: Click the label to type exact seconds.
+-   **Duration**: Set blend time (0.5s to 31.5s).
+-   **Precise Input**: Click the label to type exact seconds (up to 60s, FFmpeg's crossfade limit).
 -   *Tip*: A 1.0s crossfade is usually sufficient for smooth loops.
 
 #### Set Length (Trimming Output)
 Define the exact duration of your final loop.
 -   **Enable**: Check "Set Length".
--   **Adjust**: Use the slider (0.0s to 60.0s).
+-   **Adjust**: Use the slider (1s to 32s, 0.5s steps).
 -   **Precise Input**: Click the label to type an exact value.
 -   **Smart Constraints**: The app ensures length is at least `Crossfade + 0.5s`.
 
@@ -117,10 +121,10 @@ Processed files are saved based on your **Output Directory** setting:
 ## ❓ FAQ
 
 **Q: Why does the window stop resizing?**
-A: Oopl enforces a minimum size (500x600) to ensure all controls remain visible and usable.
+A: Oopl enforces a minimum size (500x550) to ensure all controls remain visible and usable.
 
 **Q: Can I run it on Mac?**
-A: Yes! A Mac version is available. If you have the source code, check `MIGRATION_GUIDE_MAC.md` for build instructions.
+A: Yes! A Mac version is available. If you have the source code, check `BUILD_INSTRUCTIONS.md` for build instructions.
 
 **Q: My video is shorter than the requested length?**
 A: The application will attempt to use the maximum available duration. If the video is too short for the requested crossfade, it may fail or produce a shorter loop.

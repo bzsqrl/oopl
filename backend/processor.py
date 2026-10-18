@@ -1,7 +1,6 @@
 import ffmpeg
 import os
 import subprocess
-import json
 
 def get_video_duration(input_file):
     try:

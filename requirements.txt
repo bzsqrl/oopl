@@ -1,3 +1,5 @@
 customtkinter
 tkinterdnd2
 ffmpeg-python
+pillow
+pyinstaller

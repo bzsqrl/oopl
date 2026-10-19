@@ -1,5 +1,0 @@
-customtkinter
-ffmpeg-python
-pyinstaller
-pillow
-tkinterdnd2

@@ -8,6 +8,7 @@ Desktop app (Windows + macOS) that turns video clips into seamless crossfaded VJ
 - `Oopl.spec` (Windows, one-file `.exe`) / `Oopl-Mac.spec` (macOS, `.app` bundle).
 - `libs/` — bundled `ffmpeg`/`ffprobe` binaries. **Gitignored**; must be set up per machine (see `BUILD_INSTRUCTIONS.md`).
 - `USER_MANUAL.md` and `README.md` are the same document — keep them identical.
+- `docs/` — GitHub Pages site (static `index.html`, `.nojekyll`). It restates features, formats, system requirements and FAQ from the manual; update it when those change.
 
 ## Key facts
 - `processor._find_binary` looks in `sys._MEIPASS` when frozen, `libs/` when run from source, then falls back to PATH. On macOS the binaries have no `.exe` suffix. The Mac spec bundles them into `bin/`: a bare `ffmpeg` file at the bundle root shadows the `ffmpeg` (ffmpeg-python) package and the app crashes on launch with a circular-import error.

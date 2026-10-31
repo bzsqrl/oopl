@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oopl — Seamless VJ Loops</title>
+<meta name="description" content="Oopl turns any video clip into a seamless, crossfaded VJ loop. Free desktop app for Windows and macOS. Exports HAP, DXV, ProRes, MJPEG and MP4.">
+<meta property="og:title" content="Oopl — Seamless VJ Loops">
+<meta property="og:description" content="Turn any video clip into a seamless, crossfaded VJ loop. Windows + macOS.">
+<meta property="og:image" content="logo.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07070d;
+    --bg-2: #0e0e18;
+    --panel: #12121f;
+    --line: #23233a;
+    --text: #e8e8f4;
+    --muted: #9a9ab8;
+    --cyan: #4be3ff;
+    --violet: #b06cff;
+    --grad: linear-gradient(90deg, var(--cyan), var(--violet));
+    --radius: 14px;
+    --maxw: 1080px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.6 "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, .mono { font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-size: .88em; }
+  code { background: var(--bg-2); border: 1px solid var(--line); padding: .1em .4em; border-radius: 6px; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 20px; }
+  section { padding: 88px 0; }
+  h1, h2, h3 { line-height: 1.15; margin: 0 0 .5em; letter-spacing: -.01em; }
+  h2 { font-size: clamp(28px, 4vw, 40px); }
+  h3 { font-size: 19px; }
+  .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--violet); margin-bottom: 12px; }
+  .lead { color: var(--muted); font-size: 19px; max-width: 640px; }
+  .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  /* Nav */
+  nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(12px); background: rgba(7,7,13,.72); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 700; font-size: 20px; }
+  .brand img { width: 30px; height: 30px; }
+  .brand:hover { text-decoration: none; }
+  nav ul { display: flex; gap: 26px; list-style: none; margin: 0; padding: 0; font-size: 15px; }
+  nav ul a { color: var(--muted); }
+  nav ul a:hover { color: var(--text); text-decoration: none; }
+  @media (max-width: 640px) { nav ul li:not(:last-child) { display: none; } }
+
+  /* Hero */
+  .hero { position: relative; overflow: hidden; padding: 96px 0 72px; text-align: center; }
+  .hero::before {
+    content: ""; position: absolute; inset: -40% -20% auto; height: 120%;
+    background: radial-gradient(closest-side, rgba(75,227,255,.16), transparent 70%) 30% 50% / 60% 80% no-repeat,
+                radial-gradient(closest-side, rgba(176,108,255,.18), transparent 70%) 70% 50% / 60% 80% no-repeat;
+    pointer-events: none;
+  }
+  .hero > .wrap { position: relative; }
+  .hero-logo { width: min(340px, 72vw); height: auto; filter: drop-shadow(0 0 28px rgba(120,160,255,.45)); animation: pulse 4s ease-in-out infinite; }
+  @keyframes pulse { 50% { filter: drop-shadow(0 0 46px rgba(176,108,255,.6)); } }
+  .hero h1 { font-size: clamp(40px, 7vw, 72px); margin-top: 18px; }
+  .hero .lead { margin: 0 auto 34px; }
+  .btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px; padding: 14px 24px; border-radius: 999px;
+    font-weight: 500; font-size: 16px; border: 1px solid var(--line); color: var(--text); background: var(--panel);
+    transition: transform .15s, box-shadow .15s, border-color .15s;
+  }
+  .btn:hover { text-decoration: none; transform: translateY(-2px); border-color: var(--violet); box-shadow: 0 6px 30px rgba(176,108,255,.25); }
+  .btn.primary { background: var(--grad); color: #0a0a12; border: 0; }
+  .btn svg { width: 18px; height: 18px; fill: currentColor; }
+  .sub-note { margin-top: 16px; font-size: 14px; color: var(--muted); }
+
+  /* Loop demo */
+  .demo { margin: 64px auto 0; max-width: 760px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 26px 20px; text-align: left; }
+  .demo-label { display: flex; justify-content: space-between; font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .track { position: relative; height: 54px; border-radius: 8px; overflow: hidden; background: var(--bg-2); }
+  .clip { position: absolute; top: 0; bottom: 0; }
+  .clip.body { left: 0; right: 18%; background: repeating-linear-gradient(90deg, #1d2c4a 0 2px, #17223a 2px 34px); }
+  .clip.tail { right: 0; width: 18%; background: linear-gradient(90deg, #1d2c4a, var(--violet)); opacity: .9; }
+  .clip.head { left: 0; width: 18%; background: linear-gradient(90deg, var(--cyan), rgba(75,227,255,0)); opacity: .9; }
+  .playhead { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #fff; box-shadow: 0 0 10px #fff; animation: play 5s linear infinite; }
+  @keyframes play { from { left: 0; } to { left: 100%; } }
+  .demo-caption { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; color: var(--muted); }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+  /* Features */
+  .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 40px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15.5px; }
+  .icon { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 14px; background: linear-gradient(135deg, rgba(75,227,255,.18), rgba(176,108,255,.18)); border: 1px solid var(--line); }
+  .icon svg { width: 20px; height: 20px; stroke: var(--cyan); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Steps */
+  .alt { background: var(--bg-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .steps { counter-reset: s; display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 40px; padding: 0; list-style: none; }
+  .steps li { counter-increment: s; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  .steps li::before { content: counter(s, decimal-leading-zero); display: block; font-family: "JetBrains Mono", monospace; font-size: 28px; font-weight: 500; margin-bottom: 10px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .steps p { margin: 0; color: var(--muted); font-size: 15.5px; }
+
+  /* Formats table */
+  .table-wrap { overflow-x: auto; margin-top: 36px; border: 1px solid var(--line); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 15.5px; min-width: 560px; }
+  th, td { text-align: left; padding: 14px 18px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 500; color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; background: var(--panel); }
+  tr:last-child td { border-bottom: 0; }
+  td:first-child { white-space: nowrap; font-weight: 700; }
+  td .tag { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin-left: 6px; font-weight: 400; }
+
+  /* Download */
+  .dl { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 40px; }
+  .dl .card h3 { display: flex; align-items: center; gap: 10px; }
+  .dl .card h3 svg { width: 22px; height: 22px; fill: var(--text); }
+  .dl ul { margin: 12px 0 20px; padding-left: 18px; color: var(--muted); font-size: 15px; }
+  .dl ol { margin: 0 0 4px; padding-left: 20px; color: var(--muted); font-size: 15px; }
+  .dl ol li { margin-bottom: 6px; }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; overflow-x: auto; font-size: 13px; margin: 8px 0; }
+  pre code { background: none; border: 0; padding: 0; }
+
+  /* FAQ */
+  details { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 22px; margin-top: 12px; }
+  details:first-of-type { margin-top: 36px; }
+  summary { cursor: pointer; font-weight: 500; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--violet); font-size: 22px; line-height: 1; }
+  details[open] summary::after { content: "–"; }
+  details p { color: var(--muted); margin: 12px 0 0; font-size: 15.5px; }
+
+  footer { padding: 40px 0 56px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-logo, .playhead { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#"><img src="favicon.png" alt="">Oopl</a>
+    <ul>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#formats">Formats</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a href="#download">Download</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <img class="hero-logo" src="logo.png" alt="Oopl infinity logo" width="392" height="205">
+    <h1>Every clip, <span class="grad-text">a perfect loop.</span></h1>
+    <p class="lead">Oopl turns any video into a seamless, crossfaded VJ loop. Drop in a batch of clips, pick a format, and get loops ready for Resolume, VDMX, MadMapper or TouchDesigner.</p>
+    <div class="btns">
+      <a class="btn primary" href="https://github.com/bzsqrl/Oopl/releases/latest">
+        <svg viewBox="0 0 24 24"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z"/></svg>
+        Download for Windows &amp; Mac
+      </a>
+      <a class="btn" href="https://github.com/bzsqrl/Oopl">
+        <svg viewBox="0 0 24 24"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.29-1.69-1.29-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.39-5.27 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+    <p class="sub-note">Portable · FFmpeg included · Windows 10/11 &amp; macOS 14+ (Apple Silicon)</p>
+
+    <div class="demo" aria-hidden="true">
+      <div class="demo-label"><span>0:00</span><span>loop point ↺</span></div>
+      <div class="track">
+        <div class="clip body"></div>
+        <div class="clip head"></div>
+        <div class="clip tail"></div>
+        <div class="playhead"></div>
+      </div>
+      <div class="demo-caption">
+        <span><span class="dot" style="background:var(--violet)"></span>End of the clip fades out…</span>
+        <span><span class="dot" style="background:var(--cyan)"></span>…while the start fades in. No jump, no seam.</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="eyebrow">Features</div>
+    <h2>Built for VJs who prep a lot of clips.</h2>
+    <p class="lead">Set it once, queue up a whole folder, and walk away.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M18.2 6.8a7.5 7.5 0 0 1 0 10.4M5.8 17.2a7.5 7.5 0 0 1 0-10.4M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0"/></svg></div>
+        <h3>Seamless crossfades</h3>
+        <p>Blends the end of your clip into its start, from 0.5 s up to 60 s, so the loop point disappears.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h12"/></svg></div>
+        <h3>Batch queue</h3>
+        <p>Drag in files or whole folders (subfolders included). Tick the ones you want and hit Start Batch.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 9h16M9 4v16"/></svg></div>
+        <h3>VJ-ready codecs</h3>
+        <p>HAP, Hap Q and DXV for GPU playback, plus ProRes, MJPEG and MP4 when you need them.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M6 3v12M18 9v12M6 15a3 3 0 1 0 0 6a3 3 0 1 0 0-6M18 3a3 3 0 1 0 0 6a3 3 0 1 0 0-6"/></svg></div>
+        <h3>Trim start &amp; length</h3>
+        <p>Skip a shaky intro and set the exact loop length, so every clip in a set matches.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></div>
+        <h3>Scale to any size</h3>
+        <p>One-click 4K, 1080 and 720 presets, or type a custom resolution for odd LED walls.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></div>
+        <h3>Portable, no installer</h3>
+        <p>A single app with FFmpeg bundled. Copy it anywhere and run, on Windows or Mac.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="how">
+  <div class="wrap">
+    <div class="eyebrow">How it works</div>
+    <h2>Three steps to a loop.</h2>
+    <ol class="steps">
+      <li><h3>Drop your clips</h3><p>Drag <code>.mp4</code>, <code>.mov</code>, <code>.avi</code> or <code>.mkv</code> files (or folders) onto the window.</p></li>
+      <li><h3>Dial in settings</h3><p>Choose a format and quality, set the crossfade, and optionally trim, set length and scale.</p></li>
+      <li><h3>Start the batch</h3><p>Oopl renders each loop and saves it next to the original, or to a folder you choose.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section id="formats">
+  <div class="wrap">
+    <div class="eyebrow">Formats</div>
+    <h2>Pick the codec for where it'll play.</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Format</th><th>Best for</th><th>Quality options</th></tr></thead>
+        <tbody>
+          <tr><td>HAP <span class="tag">.mov</span></td><td>Resolume, VDMX, MadMapper, TouchDesigner, Millumin</td><td>Hap or Hap Q (smoother gradients, ~2× size)</td></tr>
+          <tr><td>DXV <span class="tag">.mov</span></td><td>Resolume Avenue / Arena</td><td>Normal (DXT1)</td></tr>
+          <tr><td>ProRes <span class="tag">.mov</span></td><td>Premiere, Final Cut, DaVinci Resolve</td><td>Proxy, LT, Standard, HQ</td></tr>
+          <tr><td>MJPEG <span class="tag">.mov</span></td><td>Older or lightweight VJ software</td><td>Q 31 → 2</td></tr>
+          <tr><td>MP4 <span class="tag">.mp4</span></td><td>Sharing, web, social, phones</td><td>H.264, CRF 35 → 18</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="download">
+  <div class="wrap">
+    <div class="eyebrow">Download</div>
+    <h2>Get Oopl.</h2>
+    <p class="lead">Grab the latest build from <a href="https://github.com/bzsqrl/Oopl/releases/latest">GitHub Releases</a>. Oopl isn't code-signed yet, so your OS will ask once before the first launch.</p>
+    <div class="dl">
+      <div class="card">
+        <h3><svg viewBox="0 0 24 24"><path d="M3 5.5l7.5-1v7H3zM11.5 4.3L21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>Windows</h3>
+        <ul><li>Windows 10 or 11, 64-bit</li><li>Single portable <code>Oopl.exe</code></li></ul>
+        <ol>
+          <li>Put <code>Oopl.exe</code> anywhere and double-click it.</li>
+          <li>If SmartScreen appears, click <b>More info → Run anyway</b>.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3><svg viewBox="0 0 24 24"><path d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.8-2-1.6-.2-3.1.9-3.9.9s-2-.9-3.4-.9C5.8 6.8 4 7.9 3.1 9.6c-1.9 3.3-.5 8.2 1.4 10.9.9 1.3 2 2.8 3.4 2.7 1.4-.1 1.9-.9 3.5-.9s2.1.9 3.5.9c1.5 0 2.4-1.3 3.3-2.7 1-1.5 1.5-3 1.5-3.1-.1 0-2.8-1.1-2.8-4.8zM13.8 4.9c.7-.9 1.2-2.1 1.1-3.3-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.2 1.1.1 2.3-.6 3-1.5z"/></svg>macOS</h3>
+        <ul><li>macOS 14 Sonoma or later, Apple Silicon</li><li>Requires Rosetta 2 (most Macs have it)</li></ul>
+        <ol>
+          <li>Drag <code>Oopl.app</code> into Applications.</li>
+          <li>Open it once, then go to <b>System Settings → Privacy &amp; Security → Open Anyway</b>.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="eyebrow">FAQ</div>
+    <h2>Questions.</h2>
+    <details>
+      <summary>Why can't I preview HAP or DXV files in my media player?</summary>
+      <p>Built-in players on Windows and Mac don't support them. Preview in your VJ software, or use the free VLC player.</p>
+    </details>
+    <details>
+      <summary>Mac says "Oopl.app is damaged and can't be opened".</summary>
+      <p>That's macOS blocking an unsigned app. Open Terminal and run <code>xattr -cr /Applications/Oopl.app</code>, then open Oopl again.</p>
+    </details>
+    <details>
+      <summary>Exports fail on Mac with "Bad CPU type in executable".</summary>
+      <p>Rosetta 2 is missing. Install it in Terminal with <code>softwareupdate --install-rosetta --agree-to-license</code>.</p>
+    </details>
+    <details>
+      <summary>Does it run on Intel Macs?</summary>
+      <p>The release build is Apple Silicon only, but you can build your own copy from source. See <a href="https://github.com/bzsqrl/Oopl/blob/main/BUILD_INSTRUCTIONS.md">BUILD_INSTRUCTIONS.md</a>.</p>
+    </details>
+    <details>
+      <summary>Will Oopl overwrite my files?</summary>
+      <p>Never your originals. Output gets a tag like <code>_oopl</code> in its name. If an output with that exact name already exists, it's replaced, so change the tag or output folder to keep older versions.</p>
+    </details>
+    <p style="margin-top:28px;color:var(--muted)">Full details are in the <a href="https://github.com/bzsqrl/Oopl/blob/main/USER_MANUAL.md">user manual</a>.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Oopl · seamless VJ loops</span>
+    <span><a href="https://github.com/bzsqrl/Oopl">GitHub</a> · <a href="https://github.com/bzsqrl/Oopl/releases/latest">Releases</a> · <a href="https://github.com/bzsqrl/Oopl/blob/main/USER_MANUAL.md">Manual</a></span>
+  </div>
+</footer>
+
+</body>
+</html>

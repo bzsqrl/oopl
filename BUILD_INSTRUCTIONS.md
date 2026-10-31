@@ -26,7 +26,6 @@ FFmpeg is bundled into the exe from a `libs` folder. `libs/` is gitignored (the 
 2.  Create `libs\` in the project root and copy in:
     - `bin\ffmpeg.exe` from the full build.
     - `ffprobe.exe`: any build works, since it only reads clip durations. The essentials `ffprobe.exe` (~100 MB) keeps the exe much smaller than the full one (~230 MB).
-    - `LICENSE` from the full build, renamed to `FFMPEG-LICENSE.txt`.
 3.  Confirm the encoders are present:
     ```powershell
     libs\ffmpeg.exe -hide_banner -encoders | findstr /R "hap dxv"
@@ -53,7 +52,7 @@ If `pyinstaller` isn't recognized, use `python -m PyInstaller Oopl.spec`. The bu
 
 - `dist\Oopl.exe`: a single portable file (~145 MB) with Python, the GUI libraries and FFmpeg inside. Rebuilding **overwrites** it, so rename the previous one first if you want to keep it.
 - `build\` holds intermediate files and can be deleted.
-- When distributing, put `Oopl.exe` and `FFMPEG-LICENSE.txt` together in a zip. FFmpeg is GPL-licensed and the license must accompany it.
+- When distributing, zip an `Oopl` folder containing `Oopl.exe` and `FFMPEG-LICENSE.txt` (from the repo root) as `Oopl-vX.Y.Z-Windows.zip`. FFmpeg is GPL-licensed and the license must accompany it.
 
 ### Troubleshooting
 
@@ -127,6 +126,16 @@ pyinstaller Oopl-Mac.spec
 
 #### 3. Output
 The built application will be in `dist/Oopl.app`.
+
+#### 4. Package for Release
+Put the app and the FFmpeg license in an `Oopl` folder and zip it with `ditto` (Finder's or `zip`'s output can break the app bundle's symlinks and code signature):
+
+```bash
+mkdir -p release/Oopl
+ditto dist/Oopl.app release/Oopl/Oopl.app
+cp FFMPEG-LICENSE.txt release/Oopl/
+ditto -c -k --sequesterRsrc --keepParent release/Oopl Oopl-vX.Y.Z-macOS.zip
+```
 
 ### Troubleshooting
 

@@ -45,3 +45,7 @@ Thumbs.db
 
 # Bundled FFmpeg binaries (large; see BUILD_INSTRUCTIONS.md)
 libs/
+
+# Release packaging
+release/
+*.zip

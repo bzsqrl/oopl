@@ -19,8 +19,8 @@ Oopl runs on **Windows** and **macOS**. The app works the same on both; where so
 Oopl is fully **portable** and bundled with everything it needs, including FFmpeg. There is no installer.
 
 ### 🪟 Windows: Installing & Launching
-1.  Copy `Oopl.exe` anywhere you like (e.g. your Desktop or a `Tools` folder).
-2.  Double-click `Oopl.exe` to start.
+1.  Unzip the Windows `.zip` anywhere you like (e.g. your Desktop or a `Tools` folder).
+2.  Open the `Oopl` folder and double-click `Oopl.exe` to start.
     -   **"Windows protected your PC"**: Because Oopl is not code-signed, SmartScreen may warn you the first time. Click **More info → Run anyway**.
     -   The first launch can take a few seconds while Oopl unpacks itself.
 

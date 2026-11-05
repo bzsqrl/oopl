@@ -54,10 +54,14 @@
   .brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 700; font-size: 20px; }
   .brand img { width: 30px; height: 30px; }
   .brand:hover { text-decoration: none; }
-  nav ul { display: flex; gap: 26px; list-style: none; margin: 0; padding: 0; font-size: 15px; }
+  nav ul { display: flex; align-items: center; gap: 26px; list-style: none; margin: 0; padding: 0; font-size: 15px; }
   nav ul a { color: var(--muted); }
   nav ul a:hover { color: var(--text); text-decoration: none; }
-  @media (max-width: 640px) { nav ul li:not(:last-child) { display: none; } }
+  @media (max-width: 640px) { nav ul li:not(:nth-last-child(-n+2)) { display: none; } }
+  nav a.ai-badge { display: block; flex-shrink: 0; transition: transform 0.2s ease; }
+  nav a.ai-badge:hover { transform: scale(1.08); text-decoration: none; }
+  nav a.ai-badge img { display: block; width: 39px; height: 44px; max-width: none; }
+  @media (max-width: 420px) { nav a.ai-badge img { width: 32px; height: 36px; } }
 
   /* Hero */
   .hero { position: relative; overflow: hidden; padding: 96px 0 72px; text-align: center; }
@@ -140,6 +144,7 @@
 
   footer { padding: 40px 0 56px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
   footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  footer .ai-note { flex-basis: 100%; margin: 0; }
 
   @media (prefers-reduced-motion: reduce) {
     .hero-logo, .playhead { animation: none; }
@@ -157,6 +162,7 @@
       <li><a href="#formats">Formats</a></li>
       <li><a href="#faq">FAQ</a></li>
       <li><a href="#download">Download</a></li>
+      <li><a class="ai-badge" href="https://aibadge.org/" target="_blank" rel="noopener" title="Made with AI (aibadge.org)"><img src="made-with-ai.png" alt="Made with AI" width="39" height="44"></a></li>
     </ul>
   </div>
 </nav>
@@ -324,6 +330,7 @@
   <div class="wrap">
     <span>Oopl · seamless VJ loops</span>
     <span><a href="https://github.com/bzsqrl/Oopl">GitHub</a> · <a href="https://github.com/bzsqrl/Oopl/releases/latest">Releases</a> · <a href="https://github.com/bzsqrl/Oopl/blob/main/USER_MANUAL.md">Manual</a></span>
+    <p class="ai-note">Made with AI: Oopl's code and documentation were largely written with an AI coding tool (Claude Code), directed and tested by a person.</p>
   </div>
 </footer>
 
